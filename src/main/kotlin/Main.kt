@@ -1,5 +1,6 @@
 import dev.inmo.tgbotapi.bot.ktor.telegramBot
 import dev.inmo.tgbotapi.extensions.api.bot.getMe
+import dev.inmo.tgbotapi.extensions.api.send.reply
 import dev.inmo.tgbotapi.extensions.api.send.sendMessage
 import dev.inmo.tgbotapi.extensions.behaviour_builder.BehaviourContext
 import dev.inmo.tgbotapi.extensions.behaviour_builder.buildBehaviourWithLongPolling
@@ -23,23 +24,18 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.time.LocalDate
+import java.time.DayOfWeek
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 
 const val telegramToken = "5791814775:AAEmorTAxE_zEn55MXewyR-oXn1P5d3BMFg"
 
-val mainTimer = Timer(true)
 val cs = CoroutineScope(Dispatchers.Default + Job())
 
-val mainTimerCoroutineScope = CoroutineScope(Dispatchers.Default + Job())
+val bot = telegramBot(telegramToken)
 
-private val bot = telegramBot(telegramToken)
-
-val startJobTask = mutableListOf<TimerTask>()
+val taskScheduler = TaskScheduler()
 
 object DbSettings {
     val db by lazy {
@@ -54,6 +50,56 @@ suspend fun main() {
     transaction {
         SchemaUtils.create(Chats)
         commit()
+    }
+
+    taskScheduler.start()
+
+    transaction {
+        Chat.all().forEach {
+            if (it.startJobTime != null)
+                addJobTask(
+                    Task(
+                        chatId = it.id.value,
+                        time = it.startJobTime!!,
+                        type = TaskType.StartDay,
+                        daysOfWeek = listOf(
+                            DayOfWeek.MONDAY,
+                            DayOfWeek.TUESDAY,
+                            DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY,
+                            DayOfWeek.FRIDAY
+                        ),
+                        job = { bot.sendMessage(ChatId(it.id.value), START_DAY_MESSAGE) }
+                    )
+                )
+            if (it.endJobTime != null)
+                addJobTask(
+                    Task(
+                        chatId = it.id.value,
+                        time = it.endJobTime!!,
+                        type = TaskType.EndDay,
+                        daysOfWeek = listOf(
+                            DayOfWeek.MONDAY,
+                            DayOfWeek.TUESDAY,
+                            DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY
+                        ),
+                        job = { bot.sendMessage(ChatId(it.id.value), END_DAY_MESSAGE) }
+                    )
+                )
+            if (it.endJobFridayTime != null)
+                addJobTask(
+                    Task(
+                        chatId = it.id.value,
+                        time = it.endJobFridayTime!!,
+                        type = TaskType.EndFriday,
+                        daysOfWeek = listOf(
+                            DayOfWeek.FRIDAY
+                        ),
+                        job = { bot.sendMessage(ChatId(it.id.value), END_FRIDAY_MESSAGE) }
+                    )
+                )
+        }
     }
 
     cs.launch {
@@ -80,30 +126,86 @@ suspend fun main() {
                     sendMessage(it.chat, "hello to chat")
             }
 
-            onCommandWithArgs("start_work_time") { commonMessage, args ->
-                handleTimeCommand(commonMessage, args.toList())
+            onCommandWithArgs("start_day") { commonMessage, args ->
+                handleTimeCommand(commonMessage, args.toList(), TaskType.StartDay)
+            }
+
+            onCommandWithArgs("end_day") { commonMessage, args ->
+                handleTimeCommand(commonMessage, args.toList(), TaskType.EndDay)
+            }
+
+            onCommandWithArgs("end_friday") { commonMessage, args ->
+                handleTimeCommand(commonMessage, args.toList(), TaskType.EndFriday)
             }
 
         }.join()
     }.join()
 }
 
-suspend fun BehaviourContext.handleTimeCommand(commonMessage: CommonMessage<TextContent>, args: List<String>) {
+suspend fun BehaviourContext.handleTimeCommand(
+    commonMessage: CommonMessage<TextContent>,
+    args: List<String>,
+    taskType: TaskType,
+) {
     try {
         if (commonMessage.chat !is GroupChat || commonMessage.chat !is SupergroupChat) return
         if (args.size != 1) {
-            sendMessage(commonMessage.chat, "Wrong args. Use: /start_work_time 17:00")
+            reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00")
             return
         }
 
         val chat = getChat(commonMessage.chat)
 
-        val timeToStart = parseStringTime(args.first())
+        val time = parseStringTime(args.first())
 
-        transaction { chat.startJobTime = timeToStart.toSecondOfDay() }
+        when (taskType) {
+            TaskType.StartDay -> {
+                transaction { chat.startJobTime = time }
+                addJobTask(
+                    Task(
+                        chatId = chat.id.value,
+                        time = time,
+                        type = TaskType.StartDay,
+                        daysOfWeek = listOf(
+                            DayOfWeek.MONDAY,
+                            DayOfWeek.TUESDAY,
+                            DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY,
+                            DayOfWeek.FRIDAY
+                        ),
+                        job = { sendMessage(commonMessage.chat, START_DAY_MESSAGE) })
+                )
+            }
 
-        updateStartJobTasks()
+            TaskType.EndDay -> {
+                transaction { chat.endJobTime = time }
+                addJobTask(
+                    Task(
+                        chatId = chat.id.value,
+                        time = time,
+                        type = TaskType.EndDay,
+                        daysOfWeek = listOf(
+                            DayOfWeek.MONDAY,
+                            DayOfWeek.TUESDAY,
+                            DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY
+                        ),
+                        job = { sendMessage(commonMessage.chat, END_DAY_MESSAGE) })
+                )
+            }
 
+            TaskType.EndFriday -> {
+                transaction { chat.endJobFridayTime = time }
+                addJobTask(
+                    Task(
+                        chatId = chat.id.value,
+                        time = time,
+                        type = TaskType.EndFriday,
+                        daysOfWeek = listOf(DayOfWeek.FRIDAY),
+                        job = { sendMessage(commonMessage.chat, END_FRIDAY_MESSAGE) })
+                )
+            }
+        }
         sendMessage(commonMessage.chat, "Successful")
     } catch (e: Exception) {
         sendMessage(commonMessage.chat, "error: ${e.message}")
@@ -111,47 +213,20 @@ suspend fun BehaviourContext.handleTimeCommand(commonMessage: CommonMessage<Text
     }
 }
 
-fun updateStartJobTasks() {
-    startJobTask.cancel()
-
-
-    transaction {
-        Chat.all().filter { it.startJobTime != null }.map { it.id.value to it.startJobTime!! }.forEach {
-            val task = object : TimerTask() {
-                override fun run() {
-                    try {
-                        mainTimerCoroutineScope.launch { bot.sendMessage(ChatId(it.first), "Time to work bitches!") }
-                    } catch (e: Exception) {
-                    }
-                }
-            }
-            startJobTask.add(task)
-            mainTimer.schedule(task, LocalTime.ofSecondOfDay(it.second.toLong()).toDate())
+fun addJobTask(task: Task) {
+    val chatTasks = taskScheduler.findTasksByChat(task.chatId)
+    chatTasks.filter { it.type == task.type }.let {
+        when {
+            it.size > 1 -> throw IllegalStateException("too much task for ${task.type}")
+            it.size == 1 -> taskScheduler.removeTask(it.first())
         }
     }
+    taskScheduler.addTask(task)
 }
 
 fun parseStringTime(timeString: String): LocalTime {
+    //todo(сделать проверку правильности формата времени в строке)
     return LocalTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_TIME)
-}
-
-fun LocalTime.toDate(): Date {
-    val timeNow = LocalTime.now()
-    val dateTime = if (this.isAfter(timeNow)) this.atDate(LocalDate.now()) else this.atDate(LocalDate.now().plusDays(1))
-    val instant = dateTime.atZone(ZoneId.systemDefault()).toInstant()
-
-    return Date.from(instant)
-}
-
-fun MutableList<TimerTask>.cancel() {
-    val toDelete = mutableListOf<TimerTask>()
-    forEachIndexed { index, timerTask ->
-        timerTask.cancel().also {
-            println("$index : $it")
-            if (it) toDelete.add(timerTask)
-        }
-    }
-    this.removeAll(toDelete)
 }
 
 fun getChat(chatTg: dev.inmo.tgbotapi.types.chat.Chat): Chat {

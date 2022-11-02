@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  bot:
+    container_name: smoke_manager_tg_bot
+    build: .
+    volumes:
+      - ./data.db:/SmokeManagerTgBot/data.db
+      - ./logs:/SmokeManagerTgBot/logs
+    restart: unless-stopped
