@@ -29,6 +29,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
 }
 
 tasks.test {

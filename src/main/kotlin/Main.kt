@@ -1,3 +1,4 @@
+import dev.inmo.tgbotapi.bot.TelegramBot
 import dev.inmo.tgbotapi.bot.ktor.telegramBot
 import dev.inmo.tgbotapi.extensions.api.bot.getMe
 import dev.inmo.tgbotapi.extensions.api.send.reply
@@ -26,7 +27,6 @@ import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.DayOfWeek
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 
 val telegramToken = System.getenv("SMOKE_MANAGER_TG_BOT_TOKEN") ?: throw IllegalArgumentException()
@@ -57,48 +57,11 @@ suspend fun main() {
     transaction {
         Chat.all().forEach {
             if (it.startJobTime != null)
-                addJobTask(
-                    Task(
-                        chatId = it.id.value,
-                        time = it.startJobTime!!,
-                        type = TaskType.StartDay,
-                        daysOfWeek = listOf(
-                            DayOfWeek.MONDAY,
-                            DayOfWeek.TUESDAY,
-                            DayOfWeek.WEDNESDAY,
-                            DayOfWeek.THURSDAY,
-                            DayOfWeek.FRIDAY
-                        ),
-                        job = { bot.sendMessage(ChatId(it.id.value), START_DAY_MESSAGE) }
-                    )
-                )
+                addJobTask(TaskType.StartDay, it.id.value, it.startJobTime!!, bot)
             if (it.endJobTime != null)
-                addJobTask(
-                    Task(
-                        chatId = it.id.value,
-                        time = it.endJobTime!!,
-                        type = TaskType.EndDay,
-                        daysOfWeek = listOf(
-                            DayOfWeek.MONDAY,
-                            DayOfWeek.TUESDAY,
-                            DayOfWeek.WEDNESDAY,
-                            DayOfWeek.THURSDAY
-                        ),
-                        job = { bot.sendMessage(ChatId(it.id.value), END_DAY_MESSAGE) }
-                    )
-                )
+                addJobTask(TaskType.EndDay, it.id.value, it.startJobTime!!, bot)
             if (it.endJobFridayTime != null)
-                addJobTask(
-                    Task(
-                        chatId = it.id.value,
-                        time = it.endJobFridayTime!!,
-                        type = TaskType.EndFriday,
-                        daysOfWeek = listOf(
-                            DayOfWeek.FRIDAY
-                        ),
-                        job = { bot.sendMessage(ChatId(it.id.value), END_FRIDAY_MESSAGE) }
-                    )
-                )
+                addJobTask(TaskType.EndFriday, it.id.value, it.startJobTime!!, bot)
         }
     }
 
@@ -156,54 +119,27 @@ suspend fun BehaviourContext.handleTimeCommand(
 
         val chat = getChat(commonMessage.chat)
 
-        val time = parseStringTime(args.first())
+        val time = args.first().toLocalTimeOrNull()
+
+        if (time == null) {
+            reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00")
+            return
+        }
 
         when (taskType) {
             TaskType.StartDay -> {
                 transaction { chat.startJobTime = time }
-                addJobTask(
-                    Task(
-                        chatId = chat.id.value,
-                        time = time,
-                        type = TaskType.StartDay,
-                        daysOfWeek = listOf(
-                            DayOfWeek.MONDAY,
-                            DayOfWeek.TUESDAY,
-                            DayOfWeek.WEDNESDAY,
-                            DayOfWeek.THURSDAY,
-                            DayOfWeek.FRIDAY
-                        ),
-                        job = { sendMessage(commonMessage.chat, START_DAY_MESSAGE) })
-                )
+                addJobTask(TaskType.StartDay, chat.id.value, time, bot)
             }
 
             TaskType.EndDay -> {
                 transaction { chat.endJobTime = time }
-                addJobTask(
-                    Task(
-                        chatId = chat.id.value,
-                        time = time,
-                        type = TaskType.EndDay,
-                        daysOfWeek = listOf(
-                            DayOfWeek.MONDAY,
-                            DayOfWeek.TUESDAY,
-                            DayOfWeek.WEDNESDAY,
-                            DayOfWeek.THURSDAY
-                        ),
-                        job = { sendMessage(commonMessage.chat, END_DAY_MESSAGE) })
-                )
+                addJobTask(TaskType.EndDay, chat.id.value, time, bot)
             }
 
             TaskType.EndFriday -> {
                 transaction { chat.endJobFridayTime = time }
-                addJobTask(
-                    Task(
-                        chatId = chat.id.value,
-                        time = time,
-                        type = TaskType.EndFriday,
-                        daysOfWeek = listOf(DayOfWeek.FRIDAY),
-                        job = { sendMessage(commonMessage.chat, END_FRIDAY_MESSAGE) })
-                )
+                addJobTask(TaskType.EndFriday, chat.id.value, time, bot)
             }
         }
         sendMessage(commonMessage.chat, "Successful")
@@ -213,20 +149,42 @@ suspend fun BehaviourContext.handleTimeCommand(
     }
 }
 
-fun addJobTask(task: Task) {
-    val chatTasks = taskScheduler.findTasksByChat(task.chatId)
-    chatTasks.filter { it.type == task.type }.let {
-        when {
-            it.size > 1 -> throw IllegalStateException("too much task for ${task.type}")
-            it.size == 1 -> taskScheduler.removeTask(it.first())
-        }
-    }
-    taskScheduler.addTask(task)
-}
+fun addJobTask(type: TaskType, chatId: Long, time: LocalTime, bot: TelegramBot) {
+    val (dayOfWeek, message) =
+        when (type) {
+            TaskType.StartDay -> {
+                listOf(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY
+                ) to START_DAY_MESSAGE
+            }
 
-fun parseStringTime(timeString: String): LocalTime {
-    //todo(сделать проверку правильности формата времени в строке)
-    return LocalTime.parse(timeString, DateTimeFormatter.ISO_LOCAL_TIME)
+            TaskType.EndDay -> {
+                listOf(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY
+                ) to END_DAY_MESSAGE
+            }
+
+            TaskType.EndFriday -> {
+                listOf(
+                    DayOfWeek.FRIDAY
+                ) to END_FRIDAY_MESSAGE
+            }
+        }
+    taskScheduler.addJobTask(
+        Task(
+            chatId = chatId,
+            time = time,
+            type = type,
+            daysOfWeek = dayOfWeek,
+            job = { bot.sendMessage(ChatId(chatId), message) })
+    )
 }
 
 fun getChat(chatTg: dev.inmo.tgbotapi.types.chat.Chat): Chat {
@@ -237,8 +195,7 @@ fun getChat(chatTg: dev.inmo.tgbotapi.types.chat.Chat): Chat {
 
 fun findChat(id: Long): Chat? = transaction { Chat.findById(id) }
 
-fun createChat(id: Long): Chat {
-    return transaction { Chat.new(id) { } }
-}
+fun createChat(id: Long): Chat = transaction { Chat.new(id) { } }
+
 
 

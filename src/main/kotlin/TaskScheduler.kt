@@ -16,10 +16,6 @@ class TaskScheduler() {
         taskSchedulerThread.start()
     }
 
-    fun addTask(task: Task) {
-        taskSchedulerThread.addTask(task)
-    }
-
     fun removeTask(task: Task) {
         taskSchedulerThread.removeTask(task)
     }
@@ -30,6 +26,17 @@ class TaskScheduler() {
 
     fun findTasksByChat(chat: Chat): List<Task> {
         return findTasksByChat(chat)
+    }
+
+    fun addJobTask(task: Task) {
+        val chatTasks = taskScheduler.findTasksByChat(task.chatId)
+        chatTasks.filter { it.type == task.type }.let {
+            when {
+                it.size > 1 -> throw IllegalStateException("too much task for ${task.type}")
+                it.size == 1 -> taskScheduler.removeTask(it.first())
+            }
+        }
+        taskSchedulerThread.addTask(task)
     }
 
 }
