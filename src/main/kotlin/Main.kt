@@ -29,7 +29,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 
-const val telegramToken = "5791814775:AAEmorTAxE_zEn55MXewyR-oXn1P5d3BMFg"
+val telegramToken = System.getenv("SMOKE_MANAGER_TG_BOT_TOKEN") ?: throw IllegalArgumentException()
 
 val cs = CoroutineScope(Dispatchers.Default + Job())
 

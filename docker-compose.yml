@@ -1,8 +1,10 @@
 version: "3.9"
 services:
   bot:
-    container_name: smoke_manager_tg_bot
+    container_name: bot
     build: .
+    environment:
+      - SMOKE_MANAGER_TG_BOT_TOKEN=${SMOKE_MANAGER_TG_BOT_TOKEN}
     volumes:
       - ./data.db:/SmokeManagerTgBot/data.db
       - ./logs:/SmokeManagerTgBot/logs
