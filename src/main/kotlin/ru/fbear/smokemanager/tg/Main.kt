@@ -64,9 +64,9 @@ suspend fun main() {
             if (it.startJobTime != null)
                 addJobTask(TaskType.StartDay, it.id.value, it.startJobTime!!, bot)
             if (it.endJobTime != null)
-                addJobTask(TaskType.EndDay, it.id.value, it.startJobTime!!, bot)
+                addJobTask(TaskType.EndDay, it.id.value, it.endJobTime!!, bot)
             if (it.endJobFridayTime != null)
-                addJobTask(TaskType.EndFriday, it.id.value, it.startJobTime!!, bot)
+                addJobTask(TaskType.EndFriday, it.id.value, it.endJobFridayTime!!, bot)
         }
     }
 

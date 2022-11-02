@@ -8,4 +8,6 @@ services:
     volumes:
       - ./data.db:/SmokeManagerTgBot/data.db
       - ./logs:/SmokeManagerTgBot/logs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
