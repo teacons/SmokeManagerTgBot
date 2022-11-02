@@ -3,9 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 val exposed_version: String by project
 val log4j_version: String by project
 
-val main = "$group.MainKt"
-
-
 plugins {
     kotlin("jvm") version "1.7.10"
     application
@@ -13,6 +10,8 @@ plugins {
 
 group = "ru.fbear.smokemanager.tg"
 version = "1.0-SNAPSHOT"
+
+val main = "$group.MainKt"
 
 repositories {
     mavenCentral()
