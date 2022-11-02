@@ -1,3 +1,5 @@
+package ru.fbear.smokemanager.tg
+
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 

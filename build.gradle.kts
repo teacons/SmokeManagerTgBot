@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 val exposed_version: String by project
 val log4j_version: String by project
 
-val main = "MainKt"
+val main = "$group.MainKt"
 
 
 plugins {
@@ -11,7 +11,7 @@ plugins {
     application
 }
 
-group = "ru.fbear"
+group = "ru.fbear.smokemanager.tg"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -23,13 +23,13 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
-    implementation("org.xerial:sqlite-jdbc:3.39.2.1")
+    implementation("org.xerial:sqlite-jdbc:3.39.3.0")
     implementation("org.apache.logging.log4j:log4j-api:$log4j_version")
     implementation("org.apache.logging.log4j:log4j-core:$log4j_version")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.0")
 }
 
 tasks.test {

@@ -1,3 +1,8 @@
+package ru.fbear.smokemanager.tg
+
+import END_DAY_MESSAGE
+import END_FRIDAY_MESSAGE
+import START_DAY_MESSAGE
 import dev.inmo.tgbotapi.bot.TelegramBot
 import dev.inmo.tgbotapi.bot.ktor.telegramBot
 import dev.inmo.tgbotapi.extensions.api.bot.getMe
@@ -19,12 +24,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import models.Chat
-import models.Chats
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import ru.fbear.smokemanager.tg.models.Chat
+import ru.fbear.smokemanager.tg.models.Chats
 import java.time.DayOfWeek
 import java.time.LocalTime
 

@@ -1,4 +1,4 @@
-package models
+package ru.fbear.smokemanager.tg.models
 
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass

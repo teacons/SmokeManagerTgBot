@@ -1,8 +1,10 @@
+package ru.fbear.smokemanager.tg
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import models.Chat
+import ru.fbear.smokemanager.tg.models.Chat
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -29,11 +31,11 @@ class TaskScheduler() {
     }
 
     fun addJobTask(task: Task) {
-        val chatTasks = taskScheduler.findTasksByChat(task.chatId)
+        val chatTasks = findTasksByChat(task.chatId)
         chatTasks.filter { it.type == task.type }.let {
             when {
                 it.size > 1 -> throw IllegalStateException("too much task for ${task.type}")
-                it.size == 1 -> taskScheduler.removeTask(it.first())
+                it.size == 1 -> removeTask(it.first())
             }
         }
         taskSchedulerThread.addTask(task)
@@ -45,7 +47,7 @@ private class TaskSchedulerThread : Thread() {
 
     private val tasks = mutableListOf<Task>()
 
-//    private val oldTasks = mutableListOf<Task>()
+//    private val oldTasks = mutableListOf<ru.fbear.smokemanager.tg.Task>()
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default + Job())
 
