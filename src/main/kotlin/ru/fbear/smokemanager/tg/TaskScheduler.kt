@@ -18,21 +18,13 @@ class TaskScheduler {
         taskSchedulerThread.start()
     }
 
-    fun removeTask(task: Task) {
-        taskSchedulerThread.removeTask(task)
-    }
-
     fun findTasksByChat(chatId: Long): List<Task> {
         return taskSchedulerThread.findTasksByChatId(chatId)
     }
 
-    fun findTasksByChat(chat: Chat): List<Task> {
-        return findTasksByChat(chat)
-    }
-
     fun removeTasks(taskType: TaskType, chat: Chat) {
         findTasksByChat(chat.id.value).filter { it.type == taskType }.let { taskList ->
-            taskList.forEach { removeTask(it) }
+            taskList.forEach { taskSchedulerThread.removeTask(it) }
         }
     }
 
@@ -44,8 +36,6 @@ class TaskScheduler {
 private class TaskSchedulerThread : Thread() {
 
     private val tasks = mutableListOf<Task>()
-
-//    private val oldTasks = mutableListOf<ru.fbear.smokemanager.tg.Task>()
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default + Job())
 
@@ -86,19 +76,19 @@ private class TaskSchedulerThread : Thread() {
 
 }
 
-sealed class TaskType(val command: String) {
-    object StartDay : TaskType("start_work_time")
-    object EndDay : TaskType("end_work_time")
-//    object EndFriday : TaskType("end_friday_work_time")
+sealed class TaskType {
+    object StartDay : TaskType()
 
-    object SmokeTimeStart : TaskType("smoke_time_start")
+    object EndDay : TaskType()
 
-    object SmokeTimeEnd : TaskType("smoke_time_end")
+    object SmokeTimeStart : TaskType()
+
+    object SmokeTimeEnd : TaskType()
 
     companion object {
 
         fun TaskType.isDayCycleType(): Boolean {
-            return this == StartDay || this == EndDay /*|| this == EndFriday*/
+            return this == StartDay || this == EndDay
         }
 
         fun TaskType.isSmokeCycleType(): Boolean {
