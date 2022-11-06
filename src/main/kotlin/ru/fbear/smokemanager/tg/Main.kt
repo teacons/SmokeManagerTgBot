@@ -340,7 +340,7 @@ class Bot(telegramToken: String) {
                     time = it.key!!,
                     type = TaskType.StartDay,
                     daysOfWeek = it.value,
-                    job = { bot.sendMessage(ChatId(chat.id.value), START_DAY_MESSAGE) })
+                    job = { bot.sendMessage(ChatId(chat.id.value), START_DAY_MESSAGES.random()) })
             )
         }
 
@@ -354,7 +354,8 @@ class Bot(telegramToken: String) {
                     job = {
                         bot.sendMessage(
                             ChatId(chat.id.value),
-                            if (LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) END_FRIDAY_MESSAGE else END_DAY_MESSAGE
+                            if (LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) END_FRIDAY_MESSAGES.random()
+                            else END_DAY_MESSAGES.random()
                         )
                     })
             )
@@ -398,7 +399,7 @@ class Bot(telegramToken: String) {
                         time = time,
                         type = TaskType.SmokeTimeStart,
                         daysOfWeek = it.value,
-                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_START_MESSAGE) }
+                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_START_MESSAGES.random()) }
                     )
                 )
             }
@@ -410,7 +411,7 @@ class Bot(telegramToken: String) {
                         time = time,
                         type = TaskType.SmokeTimeEnd,
                         daysOfWeek = it.value,
-                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_END_MESSAGE) }
+                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_END_MESSAGES.random()) }
                     )
                 )
             }

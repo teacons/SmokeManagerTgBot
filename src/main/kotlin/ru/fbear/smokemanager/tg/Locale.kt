@@ -1,10 +1,10 @@
 package ru.fbear.smokemanager.tg
 
-const val START_DAY_MESSAGE = "Time to work bitches!"
-const val END_DAY_MESSAGE = "Time to go home bitches!"
-const val END_FRIDAY_MESSAGE = "FRIDAY!! end of day. go to home"
-const val SMOKE_TIME_START_MESSAGE = "Time to smoke"
-const val SMOKE_TIME_END_MESSAGE = "Time to end smoke"
+val START_DAY_MESSAGES = listOf("Time to work bitches!")
+val END_DAY_MESSAGES = listOf("Time to go home bitches!")
+val END_FRIDAY_MESSAGES = listOf("FRIDAY!! end of day. go to home")
+val SMOKE_TIME_START_MESSAGES = listOf("Time to smoke")
+val SMOKE_TIME_END_MESSAGES = listOf("Time to end smoke")
 
 
 const val COMMAND_DESCRIPTION_SET_START_MONDAY = "Set monday start"
