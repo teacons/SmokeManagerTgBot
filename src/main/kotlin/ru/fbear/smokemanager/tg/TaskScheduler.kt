@@ -10,7 +10,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
-class TaskScheduler() {
+class TaskScheduler {
 
     private val taskSchedulerThread = TaskSchedulerThread()
 
@@ -30,17 +30,15 @@ class TaskScheduler() {
         return findTasksByChat(chat)
     }
 
-    fun addJobTask(task: Task) {
-        val chatTasks = findTasksByChat(task.chatId)
-        chatTasks.filter { it.type == task.type }.let {
-            when {
-                it.size > 1 -> throw IllegalStateException("too much task for ${task.type}")
-                it.size == 1 -> removeTask(it.first())
-            }
+    fun removeTasks(taskType: TaskType, chat: Chat) {
+        findTasksByChat(chat.id.value).filter { it.type == taskType }.let { taskList ->
+            taskList.forEach { removeTask(it) }
         }
-        taskSchedulerThread.addTask(task)
     }
 
+    fun addTask(task: Task) {
+        taskSchedulerThread.addTask(task)
+    }
 }
 
 private class TaskSchedulerThread : Thread() {
@@ -91,16 +89,20 @@ private class TaskSchedulerThread : Thread() {
 sealed class TaskType(val command: String) {
     object StartDay : TaskType("start_work_time")
     object EndDay : TaskType("end_work_time")
-    object EndFriday : TaskType("end_friday_work_time")
+//    object EndFriday : TaskType("end_friday_work_time")
+
+    object SmokeTimeStart : TaskType("smoke_time_start")
+
+    object SmokeTimeEnd : TaskType("smoke_time_end")
 
     companion object {
-        fun getByCommand(command: String): TaskType {
-            return when (command) {
-                StartDay.command -> StartDay
-                EndDay.command -> EndDay
-                EndFriday.command -> EndFriday
-                else -> throw IllegalArgumentException("Wrong command")
-            }
+
+        fun TaskType.isDayCycleType(): Boolean {
+            return this == StartDay || this == EndDay /*|| this == EndFriday*/
+        }
+
+        fun TaskType.isSmokeCycleType(): Boolean {
+            return this == SmokeTimeStart || this == SmokeTimeEnd
         }
     }
 }
