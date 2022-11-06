@@ -387,8 +387,8 @@ class Bot(telegramToken: String) {
             while (a.isBefore(endTime)) {
                 a = a.plus(chat.smokeInterval.toLong(), ChronoUnit.MINUTES)
                 startSmoke.add(a)
-                if (a.isAfter(endTime)) break
                 a = a.plus(chat.smokeDuration.toLong(), ChronoUnit.MINUTES)
+                if (a.isAfter(endTime)) break
                 endSmoke.add(a)
             }
 

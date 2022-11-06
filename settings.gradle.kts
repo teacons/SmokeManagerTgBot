@@ -1,2 +1,2 @@
- rootProject.name = "SmokeManagerTgBot"
+rootProject.name = "SmokeManagerTgBot"
 
