@@ -86,7 +86,7 @@ class Bot(telegramToken: String) {
             bot.buildBehaviourWithLongPolling {
                 val me = bot.getMe()
                 onNewChatMembers {
-                    if (it.chat !is GroupChat || it.chat !is SupergroupChat) return@onNewChatMembers
+                    if (it.chat !is GroupChat && it.chat !is SupergroupChat) return@onNewChatMembers
                     if (me !in it.chatEvent.members) return@onNewChatMembers
                     val chatPreferences = findChat(it.chat.id.chatId)
                     if (chatPreferences == null) {
@@ -105,7 +105,7 @@ class Bot(telegramToken: String) {
                 }
 
                 onCommand(ListDayCycle) { message ->
-                    if (message.chat !is GroupChat || message.chat !is SupergroupChat) return@onCommand
+                    if (message.chat !is GroupChat && message.chat !is SupergroupChat) return@onCommand
                     buildString {
                         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
                         taskScheduler.findTasksByChat(message.chat.id.chatId)
@@ -140,7 +140,7 @@ class Bot(telegramToken: String) {
                 }
 
                 onCommand(ListTodaySmokeCycle) { message ->
-                    if (message.chat !is GroupChat || message.chat !is SupergroupChat) return@onCommand
+                    if (message.chat !is GroupChat && message.chat !is SupergroupChat) return@onCommand
                     buildString {
                         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
                         appendLine("```")
@@ -232,7 +232,7 @@ class Bot(telegramToken: String) {
         command: BotCommand,
     ) {
         try {
-            if (commonMessage.chat !is GroupChat || commonMessage.chat !is SupergroupChat) return
+            if (commonMessage.chat !is GroupChat && commonMessage.chat !is SupergroupChat) return
             if (args.size != 1) {
                 reply(commonMessage, "Wrong args. Use: ${command.command} 20")
                 return
@@ -270,7 +270,7 @@ class Bot(telegramToken: String) {
         taskType: BotCommand,
     ) {
         try {
-            if (commonMessage.chat !is GroupChat || commonMessage.chat !is SupergroupChat) return
+            if (commonMessage.chat !is GroupChat && commonMessage.chat !is SupergroupChat) return
             if (args.size != 1) {
                 reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00")
                 return
