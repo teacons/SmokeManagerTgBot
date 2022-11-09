@@ -258,6 +258,11 @@ class Bot(telegramToken: String) {
             val timeStart = args.first().toLocalTimeOrNull()
             val timeEnd = args[1].toLocalTimeOrNull()
 
+            if (timeStart?.isAfter(timeEnd) == true) {
+                reply(commonMessage, "Wrong args. Start of the day should be before end of the day")
+                return
+            }
+
             transaction {
                 when (taskType) {
                     Monday -> chat.apply {
