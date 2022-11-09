@@ -14,7 +14,6 @@ import dev.inmo.tgbotapi.extensions.behaviour_builder.triggers_handling.onNewCha
 import dev.inmo.tgbotapi.types.BotCommand
 import dev.inmo.tgbotapi.types.ChatId
 import dev.inmo.tgbotapi.types.chat.GroupChat
-import dev.inmo.tgbotapi.types.chat.PrivateChat
 import dev.inmo.tgbotapi.types.chat.SupergroupChat
 import dev.inmo.tgbotapi.types.message.MarkdownV2ParseMode
 import dev.inmo.tgbotapi.types.message.abstracts.CommonMessage
@@ -36,7 +35,9 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 object DbSettings {
     val db by lazy {
@@ -91,17 +92,10 @@ class Bot(telegramToken: String) {
                     val chatPreferences = findChat(it.chat.id.chatId)
                     if (chatPreferences == null) {
                         createChat(it.chat.id.chatId)
-                        sendMessage(it.chat, "Hello smokers!")
+                        sendMessage(it.chat, BOT_ADDED_FIRST_TIME)
                     } else {
-                        sendMessage(it.chat, "I am back smokers!")
+                        sendMessage(it.chat, BOT_ADDED)
                     }
-                }
-
-                onCommand("start") {
-                    if (it.chat is PrivateChat)
-                        sendMessage(it.chat, "Hello to private")
-                    else
-                        sendMessage(it.chat, "hello to chat")
                 }
 
                 onCommand(ListDayCycle) { message ->
@@ -112,12 +106,13 @@ class Bot(telegramToken: String) {
                             .filter { it.type.isDayCycleType() }.also { dayCycleList ->
 
                                 appendLine("```")
-                                appendLine("Day cycle:")
-                                val leftAlignFormat = "| %-15s | %-5s | %-5s |"
+                                appendLine("$DAY_CYCLE_STRING:")
+                                val leftAlignFormat = "| %-7s | %-5s | %-5s |"
 
-                                appendLine("+-----------------+-------+-------+")
-                                appendLine("|   Day of Week   | Start |  End  |")
-                                appendLine("+-----------------+-------+-------+")
+                                appendLine("+${"-".repeat(7)}+${"-".repeat(7)}+${"-".repeat(7)}+")
+                                appendLine(leftAlignFormat.format(DAY_STRING, START_STRING, END_STRING))
+                                appendLine("+${"-".repeat(7)}+${"-".repeat(7)}+${"-".repeat(7)}+")
+
                                 DayOfWeek.values().forEach { day ->
                                     val dayStart =
                                         dayCycleList.filter { it.type == TaskType.StartDay }
@@ -127,11 +122,13 @@ class Bot(telegramToken: String) {
                                             .find { day in it.daysOfWeek }?.time
                                     appendLine(
                                         leftAlignFormat.format(
-                                            day.name, dayStart?.format(timeFormatter), dayEnd?.format(timeFormatter)
+                                            day.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                                            dayStart?.format(timeFormatter),
+                                            dayEnd?.format(timeFormatter)
                                         )
                                     )
                                 }
-                                appendLine("+-----------------+-------+-------+")
+                                appendLine("+${"-".repeat(7)}+${"-".repeat(7)}+${"-".repeat(7)}+")
                                 appendLine("```")
                             }
                     }.also {
@@ -161,55 +158,35 @@ class Bot(telegramToken: String) {
                                     append(" - ")
                                     appendLine(smokeTime.second?.time?.format(timeFormatter))
                                 }
-                            } ?: appendLine("Nothing to show")
+                            } ?: appendLine(EMPTY_LIST)
                         appendLine("```")
                     }.also {
                         sendMessage(message.chat, it, MarkdownV2ParseMode)
                     }
                 }
 
-                onCommandWithArgs(StartMonday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartMonday)
+                onCommandWithArgs(Monday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Monday)
                 }
-                onCommandWithArgs(StartTuesday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartTuesday)
+                onCommandWithArgs(Tuesday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Tuesday)
                 }
-                onCommandWithArgs(StartWednesday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartWednesday)
+                onCommandWithArgs(Wednesday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Wednesday)
                 }
-                onCommandWithArgs(StartThursday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartThursday)
+                onCommandWithArgs(Thursday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Thursday)
                 }
-                onCommandWithArgs(StartFriday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartFriday)
+                onCommandWithArgs(Friday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Friday)
                 }
-                onCommandWithArgs(StartSaturday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartSaturday)
+                onCommandWithArgs(Saturday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Saturday)
                 }
-                onCommandWithArgs(StartSunday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), StartSunday)
+                onCommandWithArgs(Sunday) { commonMessage, args ->
+                    handleDayCycleCommand(commonMessage, args.toList(), Sunday)
                 }
-                onCommandWithArgs(EndMonday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndMonday)
-                }
-                onCommandWithArgs(EndTuesday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndTuesday)
-                }
-                onCommandWithArgs(EndWednesday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndWednesday)
-                }
-                onCommandWithArgs(EndThursday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndThursday)
-                }
-                onCommandWithArgs(EndFriday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndFriday)
-                }
-                onCommandWithArgs(EndSaturday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndSaturday)
-                }
-                onCommandWithArgs(EndSunday) { commonMessage, args ->
-                    handleDayCycleCommand(commonMessage, args.toList(), EndSunday)
-                }
+
                 onCommand("regen") {
                     addTaskByDayCycleTimetable(getChat(it.chat), bot)
                     addSmokeTasksByDayCycleTimetable(getChat(it.chat), bot)
@@ -257,9 +234,9 @@ class Bot(telegramToken: String) {
 
             addSmokeTasksByDayCycleTimetable(chat, bot)
 
-            sendMessage(commonMessage.chat, "Successful")
+            sendMessage(commonMessage.chat, SUCCESSFUL_STRING)
         } catch (e: Exception) {
-            sendMessage(commonMessage.chat, "error: ${e.message}")
+            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -271,36 +248,52 @@ class Bot(telegramToken: String) {
     ) {
         try {
             if (commonMessage.chat !is GroupChat && commonMessage.chat !is SupergroupChat) return
-            if (args.size != 1) {
-                reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00")
+            if (args.size != 2) {
+                reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00 20:00")
                 return
             }
 
             val chat = getChat(commonMessage.chat)
 
-            val time = args.first().toLocalTimeOrNull()
+            val timeStart = args.first().toLocalTimeOrNull()
+            val timeEnd = args[1].toLocalTimeOrNull()
 
-            if (time == null) {
-                reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00")
-                return
-            }
             transaction {
                 when (taskType) {
-                    StartMonday -> chat.startMonday = time
-                    StartTuesday -> chat.startTuesday = time
-                    StartWednesday -> chat.startWednesday = time
-                    StartThursday -> chat.startThursday = time
-                    StartFriday -> chat.startFriday = time
-                    StartSaturday -> chat.startSaturday = time
-                    StartSunday -> chat.startSunday = time
+                    Monday -> chat.apply {
+                        startMonday = timeStart
+                        endMonday = timeEnd
+                    }
 
-                    EndMonday -> chat.endMonday = time
-                    EndTuesday -> chat.endTuesday = time
-                    EndWednesday -> chat.endWednesday = time
-                    EndThursday -> chat.endThursday = time
-                    EndFriday -> chat.endFriday = time
-                    EndSaturday -> chat.endSaturday = time
-                    EndSunday -> chat.endSunday = time
+                    Tuesday -> chat.apply {
+                        startTuesday = timeStart
+                        endTuesday = timeEnd
+                    }
+
+                    Wednesday -> chat.apply {
+                        startWednesday = timeStart
+                        endWednesday = timeEnd
+                    }
+
+                    Thursday -> chat.apply {
+                        startThursday = timeStart
+                        endThursday = timeEnd
+                    }
+
+                    Friday -> chat.apply {
+                        startFriday = timeStart
+                        endFriday = timeEnd
+                    }
+
+                    Saturday -> chat.apply {
+                        startSaturday = timeStart
+                        endSaturday = timeEnd
+                    }
+
+                    Sunday -> chat.apply {
+                        startSunday = timeStart
+                        endSunday = timeEnd
+                    }
 
                     else -> throw IllegalArgumentException("Impossible")
                 }
@@ -308,9 +301,9 @@ class Bot(telegramToken: String) {
             }
             addTaskByDayCycleTimetable(chat, bot)
             addSmokeTasksByDayCycleTimetable(chat, bot)
-            sendMessage(commonMessage.chat, "Successful")
+            sendMessage(commonMessage.chat, SUCCESSFUL_STRING)
         } catch (e: Exception) {
-            sendMessage(commonMessage.chat, "error: ${e.message}")
+            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}")
             e.printStackTrace()
         }
     }
