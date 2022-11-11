@@ -85,6 +85,8 @@ sealed class TaskType {
 
     object SmokeTimeEnd : TaskType()
 
+    object CleanMessages : TaskType()
+
     companion object {
 
         fun TaskType.isDayCycleType(): Boolean {
@@ -98,7 +100,7 @@ sealed class TaskType {
 }
 
 data class Task(
-    val chatId: Long,
+    val chatId: Long?,
     val time: LocalTime,
     val type: TaskType,
     val daysOfWeek: List<DayOfWeek>,

@@ -4,6 +4,7 @@ import dev.inmo.tgbotapi.bot.TelegramBot
 import dev.inmo.tgbotapi.bot.ktor.telegramBot
 import dev.inmo.tgbotapi.extensions.api.bot.getMe
 import dev.inmo.tgbotapi.extensions.api.bot.setMyCommands
+import dev.inmo.tgbotapi.extensions.api.delete
 import dev.inmo.tgbotapi.extensions.api.send.reply
 import dev.inmo.tgbotapi.extensions.api.send.sendMessage
 import dev.inmo.tgbotapi.extensions.behaviour_builder.BehaviourContext
@@ -17,6 +18,7 @@ import dev.inmo.tgbotapi.types.chat.GroupChat
 import dev.inmo.tgbotapi.types.chat.SupergroupChat
 import dev.inmo.tgbotapi.types.message.MarkdownV2ParseMode
 import dev.inmo.tgbotapi.types.message.abstracts.CommonMessage
+import dev.inmo.tgbotapi.types.message.abstracts.Message
 import dev.inmo.tgbotapi.types.message.content.TextContent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +64,8 @@ class Bot(telegramToken: String) {
 
     private val taskScheduler = TaskScheduler()
 
+    private val messageToDelete = mutableListOf<Message>()
+
     suspend fun launch() {
 
         TransactionManager.defaultDatabase = DbSettings.db
@@ -72,6 +76,16 @@ class Bot(telegramToken: String) {
         }
 
         taskScheduler.start()
+
+        taskScheduler.addTask(
+            Task(
+                chatId = null,
+                time = LocalTime.of(0, 0),
+                type = TaskType.CleanMessages,
+                daysOfWeek = DayOfWeek.values().toList(),
+                job = { messageToDelete.forEach { it.delete(bot) } }
+            )
+        )
 
         transaction {
             Chat.all().forEach { chat: Chat ->
@@ -92,9 +106,9 @@ class Bot(telegramToken: String) {
                     val chatPreferences = findChat(it.chat.id.chatId)
                     if (chatPreferences == null) {
                         createChat(it.chat.id.chatId)
-                        sendMessage(it.chat, BOT_ADDED_FIRST_TIME)
+                        sendMessage(it.chat, BOT_ADDED_FIRST_TIME).also { mes -> messageToDelete.add(mes) }
                     } else {
-                        sendMessage(it.chat, BOT_ADDED)
+                        sendMessage(it.chat, BOT_ADDED).also { mes -> messageToDelete.add(mes) }
                     }
                 }
 
@@ -132,7 +146,7 @@ class Bot(telegramToken: String) {
                                 appendLine("```")
                             }
                     }.also {
-                        sendMessage(message.chat, it, MarkdownV2ParseMode)
+                        sendMessage(message.chat, it, MarkdownV2ParseMode).also { mes -> messageToDelete.add(mes) }
                     }
                 }
 
@@ -161,7 +175,7 @@ class Bot(telegramToken: String) {
                             } ?: appendLine(EMPTY_LIST)
                         appendLine("```")
                     }.also {
-                        sendMessage(message.chat, it, MarkdownV2ParseMode)
+                        sendMessage(message.chat, it, MarkdownV2ParseMode).also { mes -> messageToDelete.add(mes) }
                     }
                 }
 
@@ -211,7 +225,7 @@ class Bot(telegramToken: String) {
         try {
             if (commonMessage.chat !is GroupChat && commonMessage.chat !is SupergroupChat) return
             if (args.size != 1) {
-                reply(commonMessage, "Wrong args. Use: ${command.command} 20")
+                reply(commonMessage, "Wrong args. Use: ${command.command} 20").also { mes -> messageToDelete.add(mes) }
                 return
             }
 
@@ -220,7 +234,7 @@ class Bot(telegramToken: String) {
             val time = args.first().toIntOrNull()
 
             if (time == null) {
-                reply(commonMessage, "Wrong args. Use: ${command.command} 20")
+                reply(commonMessage, "Wrong args. Use: ${command.command} 20").also { mes -> messageToDelete.add(mes) }
                 return
             }
 
@@ -234,9 +248,9 @@ class Bot(telegramToken: String) {
 
             addSmokeTasksByDayCycleTimetable(chat, bot)
 
-            sendMessage(commonMessage.chat, SUCCESSFUL_STRING)
+            sendMessage(commonMessage.chat, SUCCESSFUL_STRING).also { mes -> messageToDelete.add(mes) }
         } catch (e: Exception) {
-            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}")
+            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}").also { mes -> messageToDelete.add(mes) }
             e.printStackTrace()
         }
     }
@@ -249,7 +263,10 @@ class Bot(telegramToken: String) {
         try {
             if (commonMessage.chat !is GroupChat && commonMessage.chat !is SupergroupChat) return
             if (args.size != 2) {
-                reply(commonMessage, "Wrong args. Use: ${taskType.command} 17:00 20:00")
+                reply(
+                    commonMessage,
+                    "Wrong args. Use: ${taskType.command} 17:00 20:00"
+                ).also { mes -> messageToDelete.add(mes) }
                 return
             }
 
@@ -259,7 +276,10 @@ class Bot(telegramToken: String) {
             val timeEnd = args[1].toLocalTimeOrNull()
 
             if (timeStart?.isAfter(timeEnd) == true) {
-                reply(commonMessage, "Wrong args. Start of the day should be before end of the day")
+                reply(
+                    commonMessage,
+                    "Wrong args. Start of the day should be before end of the day"
+                ).also { mes -> messageToDelete.add(mes) }
                 return
             }
 
@@ -306,9 +326,9 @@ class Bot(telegramToken: String) {
             }
             addTaskByDayCycleTimetable(chat, bot)
             addSmokeTasksByDayCycleTimetable(chat, bot)
-            sendMessage(commonMessage.chat, SUCCESSFUL_STRING)
+            sendMessage(commonMessage.chat, SUCCESSFUL_STRING).also { mes -> messageToDelete.add(mes) }
         } catch (e: Exception) {
-            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}")
+            sendMessage(commonMessage.chat, "$ERROR_STRING: ${e.message}").also { mes -> messageToDelete.add(mes) }
             e.printStackTrace()
         }
     }
@@ -338,7 +358,10 @@ class Bot(telegramToken: String) {
                     time = it.key!!,
                     type = TaskType.StartDay,
                     daysOfWeek = it.value,
-                    job = { bot.sendMessage(ChatId(chat.id.value), START_DAY_MESSAGES.random()) })
+                    job = {
+                        bot.sendMessage(ChatId(chat.id.value), START_DAY_MESSAGES.random())
+                            .also { mes -> messageToDelete.add(mes) }
+                    })
             )
         }
 
@@ -354,7 +377,7 @@ class Bot(telegramToken: String) {
                             ChatId(chat.id.value),
                             if (LocalDate.now().dayOfWeek == DayOfWeek.FRIDAY) END_FRIDAY_MESSAGES.random()
                             else END_DAY_MESSAGES.random()
-                        )
+                        ).also { mes -> messageToDelete.add(mes) }
                     })
             )
         }
@@ -397,7 +420,10 @@ class Bot(telegramToken: String) {
                         time = time,
                         type = TaskType.SmokeTimeStart,
                         daysOfWeek = it.value,
-                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_START_MESSAGES.random()) }
+                        job = {
+                            bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_START_MESSAGES.random())
+                                .also { mes -> messageToDelete.add(mes) }
+                        }
                     )
                 )
             }
@@ -409,7 +435,10 @@ class Bot(telegramToken: String) {
                         time = time,
                         type = TaskType.SmokeTimeEnd,
                         daysOfWeek = it.value,
-                        job = { bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_END_MESSAGES.random()) }
+                        job = {
+                            bot.sendMessage(ChatId(chat.id.value), SMOKE_TIME_END_MESSAGES.random())
+                                .also { mes -> messageToDelete.add(mes) }
+                        }
                     )
                 )
             }
